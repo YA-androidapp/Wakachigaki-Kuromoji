@@ -1,0 +1,102 @@
+<!doctype html>
+<html class="no-js" lang="ja">
+
+<head>
+    <meta charset="utf-8" />
+    <title></title>
+    <style>
+        textarea {
+            height: 5em;
+            width: 80%;
+        }
+    </style>
+    <script src="js/kuromoji.js"></script>
+</head>
+
+<body>
+    <div>
+        <textarea id="input">すもももももももものうち。</textarea>
+    </div>
+    <div>
+        <textarea id="output"></textarea>
+    </div>
+    <script>
+        let tokenizer;
+        const initWakachi = async () => {
+            await kuromoji.builder({ dicPath: "js/dict/" }).build(async (err, _tokenizer) => {
+                if (err != null) {
+                    console.log(err);
+                }
+                tokenizer = _tokenizer;
+            });
+        }
+
+        const getTokenizer = function () {
+            return tokenizer;
+        }
+
+        const formFilter = (word) => {
+            switch (word.pos) {
+                case '名詞':
+                    return word.basic_form; // outputWords.push(word.word_id);
+                case '動詞':
+                    return word.basic_form;
+                case '形容詞':
+                    return word.basic_form;
+                default:
+                    return '';
+            }
+        }
+        const wakachi = async (row) => {
+            console.log('row: '); console.log(row);
+
+            let result = [];
+            let tokenizer = getTokenizer();
+            tokenize = tokenizer.tokenize(row);
+            for (let i = 0; i < tokenize.length; i++) {
+                let res = formFilter(tokenize[i]);
+                if (res.length > 0) {
+                    result.push(res);
+                }
+            }
+
+            return result.join(' / ');
+        }
+
+        const wakachiRows = async (rows) => {
+            // console.log('rows: ');console.log(rows);
+
+            let resultRows = [];
+            for (let i = 0; i < rows.length; i++) {
+                console.log('rows[' + String(i) + ']: ' + rows[i]);
+                resultRows.push(await wakachi(rows[i]));
+            }
+
+            return resultRows.join('\n');
+        }
+
+        window.addEventListener("load", async function () {
+            await initWakachi();
+
+            document.getElementById('input').addEventListener('change', async function () {
+                let inputEle = document.getElementById('input');
+                let outputEle = document.getElementById('output');
+                inputEle.readOnly = true;
+
+                let val = inputEle.value;
+                // console.log('val: ' + val);
+                if (val.length > 0) {
+                    let rows = val.split('\n');
+                    let result = await wakachiRows(rows);
+                    // console.log('result: ');console.log(result);
+                    outputEle.value = result;
+                }
+
+                // console.log('done!');
+                inputEle.readOnly = false;
+            }, false);
+        }, false);
+    </script>
+</body>
+
+</html>
