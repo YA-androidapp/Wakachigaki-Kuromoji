@@ -1,55 +1,58 @@
-<!doctype html>
+<!DOCTYPE html>
 <html class="no-js" lang="ja">
 
 <head>
     <meta charset="utf-8" />
-    <title></title>
-    <style>
-        textarea {
-            height: 5em;
-            width: 80%;
-        }
-    </style>
+    <title>分かち書き</title>
     <script src="js/kuromoji.js"></script>
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css"
+        integrity="sha384-ggOyR0iXCbMQv3Xipma34MD+dH/1fQ784/j6cY/iJTQUOhcWr7x9JvoRxT2MZw1T" crossorigin="anonymous" />
 </head>
 
 <body>
     <div>
-        <textarea id="input">すもももももももものうち。</textarea>
+        <textarea id="input" placeholder="__label__ラベル すもももももももものうち。" class="form-control" rows="3"></textarea>
     </div>
     <div>
-        <textarea id="output"></textarea>
+        <textarea id="output" class="form-control" rows="3"></textarea>
     </div>
     <script>
         let tokenizer;
+        const wakachiSep = " ";
+        const labelSep = " ";
+
         const initWakachi = async () => {
-            await kuromoji.builder({ dicPath: "js/dict/" }).build(async (err, _tokenizer) => {
-                if (err != null) {
-                    console.log(err);
-                }
-                tokenizer = _tokenizer;
-            });
-        }
+            await kuromoji
+                .builder({
+                    dicPath: "js/dict/"
+                })
+                .build(async (err, _tokenizer) => {
+                    if (err != null) {
+                        console.log(err);
+                    }
+                    tokenizer = _tokenizer;
+                });
+        };
 
         const getTokenizer = function () {
             return tokenizer;
-        }
+        };
 
-        const formFilter = (word) => {
+        const formFilter = word => {
+            let w = "*" == word.basic_form ? word.surface_form : word.basic_form;
             switch (word.pos) {
-                case '名詞':
-                    return word.basic_form; // outputWords.push(word.word_id);
-                case '動詞':
-                    return word.basic_form;
-                case '形容詞':
-                    return word.basic_form;
+                case "名詞":
+                    return w; // return word.word_id;
+                case "動詞":
+                    return w;
+                case "形容詞":
+                    return w;
                 default:
-                    return '';
+                    return "";
             }
-        }
-        const wakachi = async (row) => {
-            console.log('row: '); console.log(row);
-
+        };
+        const wakachi = async row => {
+            // console.log('row: '); console.log(row);
             let result = [];
             let tokenizer = getTokenizer();
             tokenize = tokenizer.tokenize(row);
@@ -60,42 +63,73 @@
                 }
             }
 
-            return result.join(' / ');
-        }
+            return result.join(wakachiSep);
+        };
 
-        const wakachiRows = async (rows) => {
+        const wakachiRows = async rows => {
             // console.log('rows: ');console.log(rows);
-
             let resultRows = [];
             for (let i = 0; i < rows.length; i++) {
-                console.log('rows[' + String(i) + ']: ' + rows[i]);
-                resultRows.push(await wakachi(rows[i]));
+                // console.log('rows[' + String(i) + ']: ' + rows[i]);
+                let rowParts = rows[i].split(labelSep);
+                let strs = [],
+                    tags = [];
+                for (let j = 0; j < rowParts.length; j++) {
+                    // console.log('rowParts[' + String(j) + ']: ' + rowParts[j]);
+                    let rowPart = rowParts[j];
+                    if (0 == rowPart.indexOf("__label__")) {
+                        tags.push(rowPart);
+                    } else {
+                        strs.push(rowPart);
+                    }
+                }
+                resultRows.push(
+                    tags.join(labelSep) +
+                    labelSep +
+                    (await wakachi((strs.join(labelSep)).trim())));
             }
 
-            return resultRows.join('\n');
-        }
+            return resultRows.join("\n");
+        };
 
-        window.addEventListener("load", async function () {
-            await initWakachi();
+        window.addEventListener(
+            "load",
+            async function () {
+                    await initWakachi();
 
-            document.getElementById('input').addEventListener('change', async function () {
-                let inputEle = document.getElementById('input');
-                let outputEle = document.getElementById('output');
-                inputEle.readOnly = true;
+                    document.getElementById("input").addEventListener(
+                        "change",
+                        async function () {
+                                let inputEle = document.getElementById("input");
+                                let outputEle = document.getElementById("output");
+                                inputEle.readOnly = true;
 
-                let val = inputEle.value;
-                // console.log('val: ' + val);
-                if (val.length > 0) {
-                    let rows = val.split('\n');
-                    let result = await wakachiRows(rows);
-                    // console.log('result: ');console.log(result);
-                    outputEle.value = result;
-                }
+                                let val = inputEle.value;
+                                // console.log('val: ' + val);
+                                if (val.length > 0) {
+                                    let rows = val.split("\n");
+                                    let result = await wakachiRows(rows);
+                                    // console.log('result: ');console.log(result);
+                                    outputEle.value = result;
+                                }
 
-                // console.log('done!');
-                inputEle.readOnly = false;
-            }, false);
-        }, false);
+                                // console.log('done!');
+                                inputEle.readOnly = false;
+                            },
+                            false
+                    );
+                },
+                false
+        );
+    </script>
+    <script src="https://code.jquery.com/jquery-3.3.1.slim.min.js"
+        integrity="sha384-q8i/X+965DzO0rT7abK41JStQIAqVgRVzpbzo5smXKp4YfRvH+8abtTE1Pi6jizo" crossorigin="anonymous">
+    </script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.14.7/umd/popper.min.js"
+        integrity="sha384-UO2eT0CpHqdSJQ6hJty5KVphtPhzWj9WO1clHTMGa3JDZwrnQq4sF86dIHNDz0W1" crossorigin="anonymous">
+    </script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/js/bootstrap.min.js"
+        integrity="sha384-JjSmVgyd0p3pXB1rRibZUAYoIIy6OrQ6VrjIEaFf/nJGzIxFDsf4x0xIM+B07jRM" crossorigin="anonymous">
     </script>
 </body>
 
